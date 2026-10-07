@@ -13,45 +13,45 @@ class Step:
 
 STEPS: list[Step] = [
     Step("approver_position", "Tasdiqlovchi lavozimi",
-         "1/18. Tasdiqlovchining <b>lavozimini</b> kiriting.\n<i>Masalan: Iqtisodiyot fakulteti dekani</i>",
+         "Tasdiqlovchining <b>lavozimini</b> kiriting.\n<i>Masalan: Iqtisodiyot fakulteti dekani</i>",
          profile="tasdiqlovchi_lavozim"),
     Step("approver_name", "Tasdiqlovchi I.Familiyasi",
-         "2/18. Tasdiqlovchining <b>I.Familiyasini</b> kiriting.\n<i>Masalan: A.Turakulov</i>",
+         "Tasdiqlovchining <b>I.Familiyasini</b> kiriting.\n<i>Masalan: A.Turakulov</i>",
          profile="tasdiqlovchi_fio"),
     Step("university", "Universitet",
-         "3/18. <b>Universitet</b> nomini kiriting.\n<i>Masalan: Termiz davlat universiteti</i>",
+         "<b>Universitet</b> nomini kiriting.\n<i>Masalan: Termiz davlat universiteti</i>",
          profile="universitet"),
     Step("faculty", "Fakultet",
-         "4/18. <b>Fakultet</b> nomini kiriting.\n<i>Masalan: Iqtisodiyot fakulteti</i>",
+         "<b>Fakultet</b> nomini kiriting.\n<i>Masalan: Iqtisodiyot fakulteti</i>",
          profile="fakultet"),
     Step("event_name", "Tadbir nomi",
-         "5/18. <b>Tadbir nomini</b> kiriting.\n<i>Masalan: Arxeologiya muzeyi</i>"),
-    Step("event_type", "Tadbir turi", "6/18. <b>Tadbir turini</b> tanlang:", kind="event_type"),
+         "<b>Tadbir nomini</b> kiriting.\n<i>Masalan: Arxeologiya muzeyi</i>"),
+    Step("event_type", "Tadbir turi", "<b>Tadbir turini</b> tanlang:", kind="event_type"),
     Step("number", "Bayonnoma raqami",
-         "7/18. <b>Bayonnoma raqamini</b> kiriting yoki o'tkazib yuboring (hujjatda ____ qoladi).",
+         "<b>Bayonnoma raqamini</b> kiriting yoki o'tkazib yuboring (hujjatda ____ qoladi).",
          kind="number"),
     Step("date", "Sana",
-         "8/18. Tadbir <b>sanasini</b> KK.OO.YYYY formatida kiriting yoki «Bugun»ni bosing.\n"
+         "Tadbir <b>sanasini</b> KK.OO.YYYY formatida kiriting yoki «Bugun»ni bosing.\n"
          "<i>Masalan: 18.09.2026</i>", kind="date"),
-    Step("city", "Shahar", "9/18. <b>Shahar</b> nomini kiriting.\n<i>Masalan: Termiz</i>",
+    Step("city", "Shahar", "<b>Shahar</b> nomini kiriting.\n<i>Masalan: Termiz</i>",
          profile="shahar"),
     Step("participants", "Tadbir ishtirokchilari",
-         "10/18. <b>Tadbir ishtirokchilarini</b> kiriting.\n"
+         "<b>Tadbir ishtirokchilarini</b> kiriting.\n"
          "<i>Masalan: Fakultet tyutorlari, 1-bosqich talaba yoshlari</i>"),
     Step("venue", "O'tkazish joyi",
-         "11/18. Tadbir <b>o'tkazish joyini</b> kiriting.\n<i>Masalan: Termiz arxeologiya muzeyi</i>"),
+         "Tadbir <b>o'tkazish joyini</b> kiriting.\n<i>Masalan: Termiz arxeologiya muzeyi</i>"),
     Step("count", "Ishtirokchilar soni",
-         "12/18. <b>Ishtirokchilar sonini</b> kiriting (faqat raqam).\n<i>Masalan: 30</i>", kind="int"),
+         "<b>Ishtirokchilar sonini</b> kiriting (faqat raqam).\n<i>Masalan: 30</i>", kind="int"),
     Step("time", "Vaqti",
-         "13/18. Tadbir <b>vaqtini</b> SS:DD formatida kiriting.\n<i>Masalan: 10:00</i>", kind="time"),
-    Step("agenda", "Kun tartibi", "14/18. <b>KUN TARTIBI</b> — kim yozadi?", kind="block"),
-    Step("heard", "Eshitildi", "15/18. <b>ESHITILDI</b> matni — kim yozadi?", kind="block"),
+         "Tadbir <b>vaqtini</b> SS:DD formatida kiriting.\n<i>Masalan: 10:00</i>", kind="time"),
+    Step("agenda", "Kun tartibi", "<b>KUN TARTIBI</b> — kim yozadi?", kind="block"),
+    Step("heard", "Eshitildi", "<b>ESHITILDI</b> matni — kim yozadi?", kind="block"),
     Step("photos", "Rasmlar",
-         "16/18. Tadbirdan <b>rasmlarni</b> yuboring (0–6 ta). Rasm yoki fayl ko'rinishida "
+         "Tadbirdan <b>rasmlarni</b> yuboring (0–6 ta). Rasm yoki fayl ko'rinishida "
          "yuborishingiz mumkin.\nTugatgach «✅ Tayyor» tugmasini bosing.", kind="photos"),
-    Step("decisions", "Qaror qilindi", "17/18. <b>QAROR QILINDI</b> — kim yozadi?", kind="block"),
+    Step("decisions", "Qaror qilindi", "<b>QAROR QILINDI</b> — kim yozadi?", kind="block"),
     Step("secretary", "Yig'ilish kotibi",
-         "18/18. <b>Yig'ilish kotibining</b> I.Familiyasini kiriting.\n<i>Masalan: D.Normatova</i>",
+         "<b>Yig'ilish kotibining</b> I.Familiyasini kiriting.\n<i>Masalan: D.Normatova</i>",
          profile="kotib_fio"),
     Step("signers", "Qo'shimcha imzolar",
          "Qo'shimcha imzo qo'yuvchilar (masalan, Yig'ilish raisi) kerakmi?", kind="signers"),
@@ -76,11 +76,34 @@ PROFILE_TITLES = {
 MAX_PHOTOS = 6
 
 
-def next_step(key: str) -> str | None:
-    i = STEP_KEYS.index(key)
-    return STEP_KEYS[i + 1] if i + 1 < len(STEP_KEYS) else None
+# Doimiy ma'lumotlar: faqat profilda bo'lmasa so'raladi, keyin eslab qolinadi
+PROFILE_STEPS = ["approver_position", "approver_name", "university", "faculty", "city", "secretary"]
+# Har safar so'raladigan qisqa savollar
+EVENT_STEPS = ["event_name", "event_type", "date", "time", "venue", "count", "participants"]
+# AI yozadigan matnlar (AI ishlamasa qo'lda so'raladi)
+BLOCK_STEPS = ["agenda", "heard", "decisions"]
+
+# Tugma bilan tez tanlanadigan standart qiymatlar
+DEFAULTS = {"participants": "Fakultet tyutorlari, talaba yoshlari"}
 
 
-def prev_step(key: str) -> str | None:
-    i = STEP_KEYS.index(key)
-    return STEP_KEYS[i - 1] if i > 0 else None
+def build_flow(missing_profile: list[str], ai_enabled: bool) -> list[str]:
+    """Foydalanuvchiga beriladigan savollar ketma-ketligi."""
+    flow = [k for k in PROFILE_STEPS if k in missing_profile] + EVENT_STEPS
+    if not ai_enabled:
+        flow += BLOCK_STEPS
+    return flow + ["photos"]
+
+
+def next_in(flow: list[str], key: str) -> str | None:
+    if key not in flow:
+        return None
+    i = flow.index(key)
+    return flow[i + 1] if i + 1 < len(flow) else None
+
+
+def prev_in(flow: list[str], key: str) -> str | None:
+    if key not in flow:
+        return None
+    i = flow.index(key)
+    return flow[i - 1] if i > 0 else None

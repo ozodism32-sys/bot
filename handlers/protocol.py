@@ -19,7 +19,9 @@ import keyboards as kb
 from pdf_converter import PdfConversionError
 from protocol_service import create_and_build, draft_dir
 from states import ProtocolForm
-from steps import BLOCK_NAMES, EVENT_TYPES, MAX_PHOTOS, STEP_BY_KEY, next_step, prev_step
+from config import settings
+from steps import (BLOCK_NAMES, BLOCK_STEPS, DEFAULTS, EVENT_TYPES, MAX_PHOTOS, PROFILE_STEPS,
+                   STEP_BY_KEY, build_flow, next_in, prev_in)
 from utils import parse_date, parse_time, protocol_filename, split_lines, split_paragraphs
 
 from .helpers import drop_kb, format_block, h, send_long, summary_text
@@ -57,9 +59,16 @@ async def start_wizard(state: FSMContext, user_id: int, initial: dict | None = N
     await state.clear()
     await db.ensure_user(user_id)
     profile = await db.get_profile(user_id)
+    data = dict(initial or {})
+    # Doimiy ma'lumotlar profildan olinadi; faqat yo'qlari so'raladi
+    for key in PROFILE_STEPS:
+        if _empty(data.get(key)):
+            data[key] = profile.get(STEP_BY_KEY[key].profile)
+    missing = [k for k in PROFILE_STEPS if _empty(data.get(k))]
     await state.set_data({
-        **(initial or {}),
+        **data,
         "profile": profile,
+        "flow": build_flow(missing, settings.ai_enabled),
         "draft_id": uuid.uuid4().hex,
         "editing": bool(initial),
     })
@@ -74,8 +83,13 @@ async def ask_step(message: Message, state: FSMContext, key: str) -> None:
     prev_value = current
     if _empty(prev_value) and step.profile:
         prev_value = data.get("profile", {}).get(step.profile)
+    if _empty(prev_value):
+        prev_value = DEFAULTS.get(key)
 
+    flow = data.get("flow") or []
     text = step.prompt
+    if key in flow and not data.get("editing"):
+        text = f"{flow.index(key) + 1}/{len(flow)}. {text}"
     if step.kind in ("text", "int", "time"):
         markup = kb.inline([kb.keep_row(key, prev_value)])
     elif step.kind == "date":
@@ -85,6 +99,11 @@ async def ask_step(message: Message, state: FSMContext, key: str) -> None:
     elif step.kind == "event_type":
         markup = kb.event_type_kb(current)
         text += "\n<i>Yoki turini o'zingiz yozib yuboring.</i>"
+    elif step.kind == "block" and not settings.ai_enabled:
+        # AI sozlanmagan — "kim yozadi?" deb so'rab o'tirmaymiz, darhol qo'lda yozdiramiz
+        await message.answer(text.replace("— kim yozadi?", "").strip())
+        await _ask_manual(message, state, key, current or None)
+        return
     elif step.kind == "block":
         markup = kb.block_mode_kb(key, not _empty(current))
         if not _empty(current):
@@ -108,15 +127,54 @@ async def advance(message: Message, state: FSMContext) -> None:
     if data.get("editing"):
         await show_summary(message, state)
         return
-    nxt = next_step(data["step"])
+    nxt = next_in(data.get("flow") or [], data["step"])
     if nxt:
         await ask_step(message, state, nxt)
-    else:
+    elif await auto_write(message, state):
         await show_summary(message, state)
+
+
+async def auto_write(message: Message, state: FSMContext) -> bool:
+    """Bo'sh qolgan Kun tartibi / Eshitildi / Qarorlarni AI bilan yozadi.
+
+    AI ishlamasa, qolgan bloklarni qo'lda so'raydi va False qaytaradi.
+    """
+    data = await state.get_data()
+    todo = [k for k in BLOCK_STEPS if _empty(data.get(k))]
+    if not todo:
+        return True
+    status = await message.answer("⏳ AI matnlarni yozmoqda, biroz kuting...")
+    for i, key in enumerate(todo):
+        try:
+            await status.edit_text(f"⏳ AI yozmoqda: {BLOCK_NAMES[key]} ({i + 1}/{len(todo)})...")
+            await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+            if key == "agenda":
+                items = await ai_writer.generate_agenda(data)
+            elif key == "heard":
+                items = await ai_writer.generate_heard(data, data.get("heard_hint"))
+            else:
+                items = await ai_writer.generate_decisions(data)
+        except Exception as e:
+            if not isinstance(e, ai_writer.AIWriterError):
+                log.exception("AI kutilmagan xato")
+            rest = todo[i:]
+            await status.edit_text(
+                f"⚠️ AI matn yoza olmadi ({h(e) if isinstance(e, ai_writer.AIWriterError) else 'xatolik'}).\n"
+                "Qolgan qismlarni o'zingiz yozasiz."
+            )
+            await state.update_data(flow=(data.get("flow") or []) + rest)
+            await ask_step(message, state, rest[0])
+            return False
+        data[key] = items
+        await state.update_data({key: items})
+    await status.edit_text("✅ AI matnlarni yozdi. Xulosani tekshiring — kerak bo'lsa «✏️ Tahrirlash» bosing.")
+    return True
 
 
 async def set_and_advance(message: Message, state: FSMContext, key: str, value) -> None:
     await state.update_data({key: value})
+    if key in PROFILE_MAP and value:  # doimiy ma'lumot darhol eslab qolinadi
+        await db.update_profile(message.chat.id, **{PROFILE_MAP[key]: value})
     await advance(message, state)
 
 
@@ -139,12 +197,16 @@ async def _check_step(cb: CallbackQuery, state: FSMContext, key: str) -> bool:
 @router.message(F.text == kb.BTN_NEW)
 async def new_protocol(message: Message, state: FSMContext) -> None:
     await start_wizard(state, message.from_user.id)
-    await message.answer(
-        "📝 Yangi bayonnoma yaratishni boshlaymiz.\n"
-        "Har qadamda «⬅️ Orqaga» yoki «❌ Bekor qilish» tugmalaridan foydalanishingiz mumkin.",
-        reply_markup=kb.nav_menu(),
-    )
-    await ask_step(message, state, "approver_position")
+    data = await state.get_data()
+    flow = data["flow"]
+    intro = "📝 Yangi bayonnoma. Bir nechta qisqa savol beraman."
+    if flow[0] in PROFILE_STEPS:
+        intro += ("\nBirinchi marta universitet, dekan va kotib ma'lumotlarini ham so'rayman — "
+                  "keyingi safar so'ramayman.")
+    if settings.ai_enabled:
+        intro += "\nKun tartibi, Eshitildi va Qarorlarni AI o'zi yozadi."
+    await message.answer(intro, reply_markup=kb.nav_menu())
+    await ask_step(message, state, flow[0])
 
 
 @router.message(StateFilter(ProtocolForm), F.text == kb.BTN_BACK)
@@ -155,11 +217,11 @@ async def go_back(message: Message, state: FSMContext) -> None:
     if current_state == ProtocolForm.format_select.state:
         await show_summary(message, state)
     elif current_state == ProtocolForm.summary.state:
-        await ask_step(message, state, "signers")
+        await ask_step(message, state, (data.get("flow") or ["photos"])[-1])
     elif data.get("editing"):
         await show_summary(message, state)
     elif current_state == getattr(ProtocolForm, step).state:
-        await ask_step(message, state, prev_step(step) or step)
+        await ask_step(message, state, prev_in(data.get("flow") or [], step) or step)
     else:  # yordamchi holat — joriy qadamni qaytadan so'raymiz
         await ask_step(message, state, step)
 
@@ -175,6 +237,8 @@ async def keep_value(cb: CallbackQuery, state: FSMContext) -> None:
     step = STEP_BY_KEY[key]
     if _empty(value) and step.profile:
         value = data.get("profile", {}).get(step.profile)
+    if _empty(value):
+        value = DEFAULTS.get(key)
     await drop_kb(cb)
     if key == "photos":
         await advance(cb.message, state)

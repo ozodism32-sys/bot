@@ -6,7 +6,10 @@ Telegram bot savollar orqali ma'lumot yig'adi va rasmiy **BAYONNOMA** hujjatini
 
 ## Imkoniyatlar
 
-- 📝 18 qadamli savol-javob (aiogram 3 FSM). Har qadamda «⬅️ Orqaga» va «❌ Bekor qilish» bor.
+- 📝 Qisqa savol-javob: har safar faqat 8 ta savol (tadbir nomi, turi, sana, vaqt, joy, soni,
+  ishtirokchilar, rasmlar). Universitet, fakultet, dekan, kotib, shahar faqat birinchi marta so'raladi.
+  Kun tartibi, Eshitildi va Qarorlarni AI avtomatik yozadi (AI kaliti bo'lmasa — qo'lda).
+  Har qadamda «⬅️ Orqaga» va «❌ Bekor qilish» bor.
 - Avval saqlangan qiymatlar «✅ Avvalgisini ishlatish» tugmasi bilan taklif qilinadi.
 - 🤖 AI matn yozadi: «✅ Qabul qilish / 🔄 Qayta yozish / ✍️ O'zim tahrirlayman».
   AI ishlamasa, xato xabari chiqadi va qo'lda yozish taklif qilinadi.
