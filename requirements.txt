@@ -4,3 +4,4 @@ python-docx>=1.1
 Pillow>=10.0
 anthropic>=1.0
 python-dotenv>=1.0
+aiohttp-socks>=0.8  # faqat TELEGRAM_PROXY ishlatilganda kerak

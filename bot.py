@@ -1,11 +1,14 @@
 """Bayonnoma Telegram boti — ishga tushirish nuqtasi."""
 import asyncio
 import logging
+import os
+import ssl
 import sys
 from logging.handlers import RotatingFileHandler
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
@@ -43,7 +46,14 @@ async def main() -> None:
     await db.init_db()
     settings.storage_dir.mkdir(parents=True, exist_ok=True)
 
-    bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    # TELEGRAM_PROXY: Telegram bloklangan tarmoqlarda (masalan, http://host:port yoki socks5://...)
+    proxy = os.getenv("TELEGRAM_PROXY") or None
+    session = AiohttpSession(proxy=proxy) if proxy else AiohttpSession()
+    ca_file = os.getenv("SSL_CERT_FILE")
+    if ca_file:  # korporativ proksi ortida: aiogram standart holda faqat certifi'ni ishlatadi
+        session._connector_init["ssl"] = ssl.create_default_context(cafile=ca_file)
+    bot = Bot(settings.bot_token, session=session,
+              default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_routers(*routers)
     dp.errors.register(on_error)
